@@ -1,5 +1,6 @@
 #include <HTTPClient.h>
 #include "camera.h"
+#include "camera_utils.h"
 
 String localTime() {
   char ttime[40];
@@ -189,7 +190,18 @@ void handleNotFound() {
 void readRGBImage() {
   // used for timing operations
   WiFiClient client = server.client();
-  uint32_t tTimer;  // used to time tasks                                                                    // open link with client
+  uint32_t tTimer;  // used to time tasks
+  static float desired = 135 / 255.0;
+  static float threshold = 10 / 255.0;
+
+  // read query params
+  // for (int i = 0; i < server.args(); i++) {
+  //   if (server.argName(i) == "desired") {
+  //     desired = server.arg(i).toFloat();
+  //   } else if (server.argName(i) == "threshold") {
+  //     threshold = server.arg(i).toFloat();
+  //   }
+  // }
 
   if (!sendRGBfile) {
     // html header
@@ -263,34 +275,50 @@ void readRGBImage() {
     return;
   }
 
-  //   ****** examples of using the resulting RGB data *****
-
   // display some of the resulting data
-  uint32_t resultsToShow = 50;  // how much data to display
-  sendText(client, "<br>R,G,B data for first " + String(resultsToShow / 3) + " pixels of image");
-  for (uint32_t i = 0; i < resultsToShow - 2; i += 3) {
-    sendText(client, String(rgb[i + 2]) + "," + String(rgb[i + 1]) + "," + String(rgb[i + 0]));  // Red , Green , Blue
-    // // calculate the x and y coordinate of the current pixel
-    //   uint16_t x = (i / 3) % fb->width;
-    //   uint16_t y = floor( (i / 3) / fb->width);
+  sendText(client, "<br>R,G,B=H,S,L for image");
+
+  // get hues
+  size_t PIXEL_COUNT = fb->width * fb->height;
+  float hues[PIXEL_COUNT] = { 0 };
+  uint32_t j = 0;
+  for (uint32_t i = 0; i < PIXEL_COUNT - 2; i += 3) {
+    uint8_t r = rgb[i + 2];
+    uint8_t g = rgb[i + 1];
+    uint8_t b = rgb[i];
+
+    HSL hsl = rgb2hsl(r, g, b);
+    hues[j++] = hsl.h;
+    sendText(client, String(r) + "," + String(g) + "," + String(b) + "=" + String(hsl.h * 255) + "," + String(hsl.s * 255) + "," + String(hsl.l * 255));  // Red , Green , Blue
   }
 
-  // find the average values for each colour over entire image
-  uint32_t aRed = 0;
-  uint32_t aGreen = 0;
-  uint32_t aBlue = 0;
-  for (uint32_t i = 0; i < (ARRAY_LENGTH - 2); i += 3) {  // go through all data and add up totals
-    aBlue += rgb[i];
-    aGreen += rgb[i + 1];
-    aRed += rgb[i + 2];
-  }
-  aRed = aRed / (fb->width * fb->height);  // divide total by number of pixels to give the average value
-  aGreen = aGreen / (fb->width * fb->height);
-  aBlue = aBlue / (fb->width * fb->height);
-  sendText(client, "Average Blue = " + String(aBlue));
-  sendText(client, "Average Green = " + String(aGreen));
-  sendText(client, "Average Red = " + String(aRed));
-  sendText(client, "Image luminance = " + String(aRed * 0.3 + aGreen * 0.59 + aBlue * 0.11));
+  // // mask
+  // bool mask[PIXEL_COUNT] = {0};
+  // sendText(client, "<br>The mask for this is");
+
+  // for (uint32_t i = 0; i < PIXEL_COUNT; i++) {
+  //   mask[i++] = filter(hues[i], desired, threshold);
+  //   sendText(client, String(mask[i - 1]) + " ");
+  // }
+
+
+
+  // // find the average values for each colour over entire image
+  // uint32_t aRed = 0;
+  // uint32_t aGreen = 0;
+  // uint32_t aBlue = 0;
+  // for (uint32_t i = 0; i < (ARRAY_LENGTH - 2); i += 3) {  // go through all data and add up totals
+  //   aBlue += rgb[i];
+  //   aGreen += rgb[i + 1];
+  //   aRed += rgb[i + 2];
+  // }
+  // aRed = aRed / (fb->width * fb->height);  // divide total by number of pixels to give the average value
+  // aGreen = aGreen / (fb->width * fb->height);
+  // aBlue = aBlue / (fb->width * fb->height);
+  // sendText(client, "Average Blue = " + String(aBlue));
+  // sendText(client, "Average Green = " + String(aGreen));
+  // sendText(client, "Average Red = " + String(aRed));
+  // sendText(client, "Image luminance = " + String(aRed * 0.3 + aGreen * 0.59 + aBlue * 0.11));
 
   client.write("<br><a href='/'>Return</a>\n");  // link back
   sendFooter(client);                            // close web page
@@ -301,7 +329,6 @@ void readRGBImage() {
 }
 
 bool handleJPG() {
-
   WiFiClient client = server.client();
   char buf[32];
 

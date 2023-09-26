@@ -19,7 +19,7 @@
 char *stitle = "ESP32Cam";  // title of this sketch
 char *sversion = "1.0";     // Sketch version
 
-bool sendRGBfile = 1;  // if set '/rgb' will just return raw rgb data which can be saved as a file rather than display a HTML pag
+bool sendRGBfile = 0;  // if set '/rgb' will just return raw rgb data which can be saved as a file rather than display a HTML pag
 
 uint16_t dataRefresh = 2;   // how often to refresh data on root web page (seconds)
 uint16_t imageRefresh = 2;  // how often to refresh the image on root web page (seconds)
@@ -27,12 +27,12 @@ uint16_t imageRefresh = 2;  // how often to refresh the image on root web page (
 const bool serialDebug = 1;  // show debug info. on serial port (1=enabled, disable if using pins 1 and 3 as gpio)
 
 // Camera related
-bool flashRequired = 1;                         // If flash to be used when capturing image (1 = yes)
-framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_SVGA;  // Resolution
-#define PIXFORMAT PIXFORMAT_JPEG;               // TODO: investigate RGB888
-int cameraImageExposure = 0;                    // Camera exposure (0 - 1200)   If gain and exposure both set to zero then auto adjust is enabled
-int cameraImageGain = 0;                        // Image gain (0 - 30)
-int cameraImageBrightness = 0;                  // Image brightness (-2 to +2)
+bool flashRequired = 1;                          // If flash to be used when capturing image (1 = yes)
+framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_QVGA;  // Resolution
+#define PIXFORMAT PIXFORMAT_JPEG;                // TODO: investigate RGB888
+int cameraImageExposure = 0;                     // Camera exposure (0 - 1200)   If gain and exposure both set to zero then auto adjust is enabled
+int cameraImageGain = 0;                         // Image gain (0 - 30)
+int cameraImageBrightness = 0;                   // Image brightness (-2 to +2)
 
 const int timeBetweenStatus = 600;  // speed of flashing system running ok status light (milliseconds)
 
@@ -52,8 +52,8 @@ const int serialSpeed = 115200;  // Serial data speed to use
 
 WebServer server(80);  // serve web pages on port 80
 
-uint32_t lastStatus = millis();        // last time status light changed status (to flash all ok led)
-String imageResDetails = "Unknown";    // image resolution info
+uint32_t lastStatus = millis();      // last time status light changed status (to flash all ok led)
+String imageResDetails = "Unknown";  // image resolution info
 
 struct tm timeinfo = {};
 const char *ntpServer = "pool.ntp.org";
@@ -157,12 +157,12 @@ void setup() {
   digitalWrite(indicatorLED, HIGH);  // small indicator led off
 
   // define the web pages (i.e. call these procedures when url is requested)
-  server.on("/", handleRoot);          // root page
-  server.on("/data", handleData);      // suplies data to periodically update root (AJAX)
+  server.on("/", handleRoot);      // root page
+  server.on("/data", handleData);  // suplies data to periodically update root (AJAX)
   server.on("/jpg", handleJPG);
-  server.on("/jpeg", handleJpeg);      // show updating image
-  server.on("/rgb", readRGBImage);     // demo converting image to RGB
-  server.onNotFound(handleNotFound);   // invalid url requested
+  server.on("/jpeg", handleJpeg);  // show updating image
+  server.on("/rgb", readRGBImage);                                 // demo converting image to RGB
+  server.onNotFound(handleNotFound);  // invalid url requested
 
   // NTP - internet time
   if (serialDebug) Serial.println("\nGetting real time (NTP)");
