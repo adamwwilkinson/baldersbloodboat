@@ -28,7 +28,7 @@ const bool serialDebug = 1;  // show debug info. on serial port (1=enabled, disa
 
 // Camera related
 bool flashRequired = 1;                          // If flash to be used when capturing image (1 = yes)
-framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_QVGA;  // Resolution
+framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_SVGA;  // Resolution
 #define PIXFORMAT PIXFORMAT_JPEG;                // TODO: investigate RGB888
 int cameraImageExposure = 0;                     // Camera exposure (0 - 1200)   If gain and exposure both set to zero then auto adjust is enabled
 int cameraImageGain = 0;                         // Image gain (0 - 30)
