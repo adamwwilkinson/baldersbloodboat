@@ -45,8 +45,18 @@ void forwards() {
 void turn(int degrees) {
   int degree_to_microseconds = map(degrees, -90, 90, 1000, 2000);
 
+  /**
+   * the 200 value here comes from the wavelength of 20ms and the coversion from
+   * microseconds to percentage
+   * ...
+   * fine i wont make it a magic number
+   * jesus dylan
+   **/
+
+  int wavelength_to_percentage_factor = 200;
+
   // 1ms pulse is -90 degrees, 1.5 ms pulse is 0 degrees, 2ms pulse is 90
-  int percentage = degree_to_microseconds / 200;
+  int percentage = degree_to_microseconds / wavelength_to_percentage_factor;
 
   pwm(SERVO, 20, percentage);
 }
@@ -62,6 +72,8 @@ void abrupt_stop() {
   }
 }
 
+// read datasheet if ur curious on why below does what it does
+// https://download.altronics.com.au/files/datasheets_Z6322Doc2.pdf
 void sensor_ping() {
   digitalWrite(SENSOR_TRIG, HIGH);
   delayMicroseconds(10);
