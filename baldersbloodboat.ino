@@ -98,9 +98,9 @@ bool echo_recieved() {
 // function called every 60ms, checks distance and if too close calls for a stop
 // function also moves boat forward
 void sensor() {
-  static long last = millis();
+  static long last = millis(), start;
 
-  long start, journey_time;
+  long journey_time;
   int centimeters = 0;
 
   if (millis() - last > 60) {
