@@ -3,8 +3,12 @@
 #define BUTTON_R 35
 
 #define SERVO 2
+
 #define HBRIDGE_CW 12
 #define HBRIDGE_CCW 13
+
+#define SENSOR_ECHO 36
+#define SENSOR_TRIG 37
 
 // wavelength in milliseconds
 void pwm(int pin, int wave_length, int ratio) {
@@ -28,7 +32,10 @@ void pwm(int pin, int wave_length, int ratio) {
   }
 }
 
-void forwards() { pwm(HBRIDGE_CW, 10, 70); }
+void forwards() {
+  digitalWrite(HBRIDGE_CCW, LOW);
+  pwm(HBRIDGE_CW, 10, 70);
+}
 
 /**
  * degrees given is degree of servo
@@ -44,7 +51,7 @@ void turn(int degrees) {
   pwm(SERVO, 20, percentage);
 }
 
-// Remove forward momenting by blipping reverse for a second
+// remove forward momentum by blipping reverse for a second
 void abrupt_stop() {
   static long last = millis();
   digitalWrite(HBRIDGE_CW, LOW);
@@ -52,6 +59,50 @@ void abrupt_stop() {
 
   if (millis() - last > 1000) {
     digitalWrite(HBRIDGE_CCW, LOW);
+  }
+}
+
+void sensor_ping() {
+  digitalWrite(SENSOR_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(SENSOR_TRIG, LOW);
+}
+
+bool echo_recieved() {
+  if (digitalRead(SENSOR_ECHO) == HIGH) {
+    return true;
+  }
+  return false;
+}
+
+// function called every 60ms, checks distance and if too close calls for a stop
+// function also moves boat forward
+void sensor() {
+  static long last = millis();
+
+  long start, journey_time;
+  int centimeters = 0;
+
+  if (millis() - last > 60) {
+    start = millis();
+    sensor_ping();
+  }
+
+  if (echo_recieved()) {
+    journey_time = millis() - start;
+  } else {
+    journey_time = 0;
+  }
+
+  if (journey_time > 0) {
+    // formula wants it in micro but journey is in milli
+    centimeters = journey_time * 1000 / 58;
+  }
+
+  if (centimeters < 10 && centimeters > 0) {
+    abrupt_stop();
+  } else {
+    forwards();
   }
 }
 
@@ -63,8 +114,12 @@ void setup() {
   pinMode(BUTTON_R, INPUT_PULLUP);
 
   pinMode(SERVO, OUTPUT);
+
   pinMode(HBRIDGE_CW, OUTPUT);
   pinMode(HBRIDGE_CCW, OUTPUT);
+
+  pinMode(SENSOR_ECHO, INPUT_PULLDOWN);
+  pinMode(SENSOR_TRIG, OUTPUT);
 }
 
 void loop() {
@@ -84,4 +139,12 @@ void loop() {
   }
 
   turn(pwm_values[pwm_value_index]);
+
+  /**
+   * i think i made this function too powerful but oh well
+   * this mf controls forwards and backwards of boats but it stops me from
+   * trying to be too smart with pointers and shii so hopefully its more
+   * readable
+   */
+  sensor();
 }
