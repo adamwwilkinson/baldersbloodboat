@@ -11,13 +11,13 @@
 #define SENSOR_TRIG 37
 
 // wavelength in milliseconds
-void pwm(int pin, int wave_length, int ratio) {
+void pwm(int pin, int wave_length, int percentage) {
   static long last = millis();
   static boolean up = true;
 
-  float uptime = wave_length * ratio / 100.0;
+  float uptime = wave_length * percentage / 100.0;
 
-  float downtime = wave_length * (100 - ratio) / 100.0;
+  float downtime = wave_length * (100 - percentage) / 100.0;
 
   if (millis() - last > downtime && !up) {
     digitalWrite(pin, HIGH);
