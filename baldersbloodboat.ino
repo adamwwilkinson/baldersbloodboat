@@ -1,3 +1,5 @@
+#include <WiFi.h>
+#include <esp_now.h>
 
 #define BUTTON_L 0
 #define BUTTON_R 35
@@ -9,6 +11,12 @@
 
 #define SENSOR_ECHO 36
 #define SENSOR_TRIG 37
+
+typedef struct struct_message {
+  int percent_from_center;
+} struct_message;
+
+struct_message camValue;
 
 // wavelength in milliseconds
 void pwm(int pin, int wave_length, int percentage) {
@@ -118,9 +126,50 @@ void sensor() {
   }
 }
 
+void servo() {
+  int percent_from_center = camValue.percent_from_center;
+  int absolute_percent_from_center = abs(percent_from_center);
+  int degrees;
+
+  // pre much just a lookup here rather than a calculation
+  // think of it as a slightly more complex bang bang controller
+  // lotta complexity in order to add a PID controller when this might
+  // just do 90% of the job
+  if (absolute_percent_from_center < 5) {
+    degrees = 0;
+  } else if (absolute_percent_from_center >= 20) {
+    degrees = 15
+  } else if (absolute_percent_from_center >= 60) {
+    degrees = 60
+  } else {
+    degrees = 90
+  }
+
+  // inverted here as we want to turn the servo the opposite way to the boat
+  if (percent_from_center > 0) {
+    degrees = -degrees;
+  }
+  turn(degrees);
+}
+
+void OnDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
+  memcpy(&camValue, incomingData, sizeof(camValue));
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
+
+  WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+  // Once ESPNow is successfully Init, we will register for recv CB to
+  // get recv packer info
+  esp_now_register_recv_cb(OnDataRecv);
 
   pinMode(BUTTON_L, INPUT_PULLUP);
   pinMode(BUTTON_R, INPUT_PULLUP);
@@ -135,22 +184,28 @@ void setup() {
 }
 
 void loop() {
-  static int pwm_value_index = 2;
-  int pwm_values[5] = {-90, -45, 0, 45, 90};
+  // just debugging below
 
-  if (digitalRead(BUTTON_L) == LOW && pwm_value_index > 0) {
-    Serial.print("-1");
-    pwm_value_index--;
-    delay(100);
-  }
+  // static int pwm_value_index = 2;
+  // int pwm_values[5] = {-90, -45, 0, 45, 90};
+  // if (digitalRead(BUTTON_L) == LOW && pwm_value_index > 0) {
+  //   Serial.print("-1");
+  //   pwm_value_index--;
+  //   delay(100);
+  // }
+  // if (digitalRead(BUTTON_R) == LOW && pwm_value_index < 4) {
+  //   Serial.print("+1");
+  //   pwm_value_index++;
+  //   delay(100);
+  // }
+  // turn(pwm_values[pwm_value_index]);
 
-  if (digitalRead(BUTTON_R) == LOW && pwm_value_index < 4) {
-    Serial.print("+1");
-    pwm_value_index++;
-    delay(100);
-  }
-
-  turn(pwm_values[pwm_value_index]);
+  /**
+   * handles the recieved cam data and turns the boat depending on the
+   * percentage distance away from center
+   * uses a look up to do this
+   **/
+  servo();
 
   /**
    * i think i made this function too powerful but oh well
