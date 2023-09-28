@@ -126,6 +126,33 @@ void sensor() {
   }
 }
 
+// likely baller
+void PID_servo() {
+  static int degrees_old = 0, error_old = 0, error_old2 = 0;
+  // todo manually tune these values
+  int Kp = 0.2, Ki = 0.05, Kd = 0.3;
+
+  int error_function = camValue.percent_from_center;
+  int raw_degrees = degrees_old + Kp * (error_function - error_old) +
+                    Ki * (error_function + error_old) / 2 +
+                    Kd * (error_function - 2 * error_old + error_old2);
+
+  // invert degrees as servo is inverted
+  int degrees = -1 * constrain(raw_degrees, -90, 90);
+  turn(degrees);
+
+  error_old2 = error_old;
+  error_old = error_function;
+  degrees_old = degrees;
+}
+
+// very primitive, probably shit
+void proportional_servo() {
+  int current_error = camValue.percent_from_center;
+  int degrees = -1 * map(current_error, -100, 100, -90, 90);
+  turn(degrees);
+}
+
 void servo() {
   int percent_from_center = camValue.percent_from_center;
   int absolute_percent_from_center = abs(percent_from_center);
@@ -201,11 +228,19 @@ void loop() {
   // turn(pwm_values[pwm_value_index]);
 
   /**
+   * handles the recieved cam data and turns the boat using a PID controller
+   **/
+  PID_servo();
+
+  /**
    * handles the recieved cam data and turns the boat depending on the
    * percentage distance away from center
    * uses a look up to do this
    **/
-  servo();
+  // servo();
+
+  // probably not great but good option to test
+  // proportional_servo();
 
   /**
    * i think i made this function too powerful but oh well
