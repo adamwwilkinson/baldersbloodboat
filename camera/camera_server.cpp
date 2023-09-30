@@ -240,7 +240,12 @@ void readRGBImage() {
   // allocate memory to store the rgb data (in psram, 3 bytes per pixel)
   sendText(client, "<br>Free psram before rgb data allocated = " + String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024) + "K");
   void *ptrVal = NULL;                                 // create a pointer for memory location to store the data
-  uint32_t ARRAY_LENGTH = fb->width * fb->height * 3;  // calculate memory required to store the RGB data (i.e. number of pixels in the jpg image x 3)
+
+  uint32_t IMAGE_WIDTH = fb->width;
+  uint32_t IMAGE_HEIGHT = fb->height;
+  uint32_t PIXEL_COUNT = IMAGE_WIDTH * IMAGE_HEIGHT;
+  uint32_t ARRAY_LENGTH = PIXEL_COUNT * 3;  // calculate memory required to store the RGB data (i.e. number of pixels in the jpg image x 3)
+
   if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < ARRAY_LENGTH) {
     sendText(client, "error: not enough free psram to store the rgb data");
     if (!sendRGBfile) {
@@ -275,50 +280,23 @@ void readRGBImage() {
     return;
   }
 
-  // display some of the resulting data
-  sendText(client, "<br>R,G,B=H,S,L for image");
-
   // get hues
-  size_t PIXEL_COUNT = fb->width * fb->height;
-  float hues[PIXEL_COUNT] = { 0 };
-  uint32_t j = 0;
-  for (uint32_t i = 0; i < PIXEL_COUNT - 2; i += 3) {
-    uint8_t r = rgb[i + 2];
-    uint8_t g = rgb[i + 1];
-    uint8_t b = rgb[i];
+  bool mask[PIXEL_COUNT] = {0};
+  imageToMask(mask, PIXEL_COUNT, rgb, ARRAY_LENGTH, desired, threshold);
 
-    HSL hsl = rgb2hsl(r, g, b);
-    hues[j++] = hsl.h;
-    sendText(client, String(r) + "," + String(g) + "," + String(b) + "=" + String(hsl.h * 255) + "," + String(hsl.s * 255) + "," + String(hsl.l * 255));  // Red , Green , Blue
-  }
+  // get histogram
+  uint8_t histogram[IMAGE_WIDTH] = {0};
+  maskToHistogram(histogram, IMAGE_WIDTH, mask, PIXEL_COUNT);
 
-  // // mask
-  // bool mask[PIXEL_COUNT] = {0};
-  // sendText(client, "<br>The mask for this is");
+  // get max
+  int maxIndex = findMaxIndex(histogram, IMAGE_WIDTH);
 
-  // for (uint32_t i = 0; i < PIXEL_COUNT; i++) {
-  //   mask[i++] = filter(hues[i], desired, threshold);
-  //   sendText(client, String(mask[i - 1]) + " ");
-  // }
+  // get percentage from center
+  float percentage = (float)(maxIndex - (IMAGE_WIDTH / 2)) / (float)IMAGE_WIDTH;
 
-
-
-  // // find the average values for each colour over entire image
-  // uint32_t aRed = 0;
-  // uint32_t aGreen = 0;
-  // uint32_t aBlue = 0;
-  // for (uint32_t i = 0; i < (ARRAY_LENGTH - 2); i += 3) {  // go through all data and add up totals
-  //   aBlue += rgb[i];
-  //   aGreen += rgb[i + 1];
-  //   aRed += rgb[i + 2];
-  // }
-  // aRed = aRed / (fb->width * fb->height);  // divide total by number of pixels to give the average value
-  // aGreen = aGreen / (fb->width * fb->height);
-  // aBlue = aBlue / (fb->width * fb->height);
-  // sendText(client, "Average Blue = " + String(aBlue));
-  // sendText(client, "Average Green = " + String(aGreen));
-  // sendText(client, "Average Red = " + String(aRed));
-  // sendText(client, "Image luminance = " + String(aRed * 0.3 + aGreen * 0.59 + aBlue * 0.11));
+  sendText(client, "Desired hue: " + String(desired));
+  sendText(client, "Threshold: " + String(threshold));
+  sendText(client, "Max index (Detected x): " + String(maxIndex));
 
   client.write("<br><a href='/'>Return</a>\n");  // link back
   sendFooter(client);                            // close web page
