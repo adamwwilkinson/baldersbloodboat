@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include <cstddef>
+
 #define NO_HUE 255;
 
 typedef struct hsl {

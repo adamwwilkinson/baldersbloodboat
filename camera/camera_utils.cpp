@@ -1,7 +1,7 @@
+#include "camera_utils.h"
+
 #include <Arduino.h>
 #include <stdint.h>
-
-#include "camera_utils.h"
 
 // https://gist.github.com/ciembor/1494530
 // Takes rgb values [0, 255]
