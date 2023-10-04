@@ -18,7 +18,7 @@ typedef struct struct_message {
 } struct_message;
 
 const uint8_t broadcastAddress[] = {0xC8, 0xC9, 0xA3, 0xFC, 0x84, 0xF0};
-const esp_now_peer_info_t peerInfo;
+esp_now_peer_info_t peerInfo;
 
 const char *stitle = "ESP32Cam";  // title of this sketch
 const char *sversion = "1.0";     // Sketch version
@@ -149,6 +149,7 @@ void setup() {
   brightLed(0);  // change bright LED
 }
 
+// ! Here is the money
 void loop() {
   // flash status LED to show sketch is running ok
   if ((unsigned long)(millis() - lastStatus) >= timeBetweenStatus) {
@@ -157,7 +158,7 @@ void loop() {
                  !digitalRead(indicatorLED));  // flip indicator led status
   }
 
-  float percentage = readRGBImage();
+  int percentage = (int)(readRGBImage() * 100);
   struct_message data = {percentage};
   esp_err_t result =
       esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(struct_message));
