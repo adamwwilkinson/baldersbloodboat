@@ -1,3 +1,4 @@
+#include <NewPing.h>
 #include <WiFi.h>
 #include <esp_now.h>
 
@@ -10,7 +11,10 @@
 #define HBRIDGE_CCW 13
 
 #define SENSOR_ECHO 36
-#define SENSOR_TRIG 37
+#define SENSOR_TRIG 32
+#define MAX_DISTANCE 400
+
+NewPing sonar(SENSOR_TRIG, SENSOR_ECHO, MAX_DISTANCE);
 
 typedef struct struct_message {
   int percent_from_center;
@@ -18,19 +22,17 @@ typedef struct struct_message {
 
 struct_message camValue;
 
-bool stopped = false;
-
 // wavelength in microseconds
 void pwm(int pin, int wave_length, float percentage) {
   float uptime = wave_length * percentage / 100.0;
 
   float downtime = wave_length * (100 - percentage) / 100.0;
-  Serial.print("uptime: ");
-  Serial.print(uptime);
-  Serial.print('\n');
-  Serial.print("downtime: ");
-  Serial.print(downtime);
-  Serial.print('\n');
+  // Serial.print("uptime: ");
+  // Serial.print(uptime);
+  // Serial.print('\n');
+  // Serial.print("downtime: ");
+  // Serial.print(downtime);
+  // Serial.print('\n');
 
   digitalWrite(pin, HIGH);
   delayMicroseconds(uptime);
@@ -38,10 +40,7 @@ void pwm(int pin, int wave_length, float percentage) {
   delayMicroseconds(downtime);
 }
 
-void forwards() {
-  digitalWrite(HBRIDGE_CCW, LOW);
-  pwm(HBRIDGE_CW, 10, 70);
-}
+void forwards() { pwm(HBRIDGE_CW, 10000, 40); }
 
 /**
  * degrees given is degree of servo
@@ -71,59 +70,27 @@ void abrupt_stop() {
 
   if (millis() - last > 1000) {
     digitalWrite(HBRIDGE_CCW, LOW);
-    stopped = true;
   }
 }
 
-// read datasheet if ur curious on why below does what it does
-// https://download.altronics.com.au/files/datasheets_Z6322Doc2.pdf
-void sensor_ping() {
-  digitalWrite(SENSOR_TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(SENSOR_TRIG, LOW);
-}
-
-bool echo_recieved() {
-  if (digitalRead(SENSOR_ECHO) == HIGH) {
-    return true;
+void get_distance(int* p_centimeters) {
+  static long last = millis();
+  if (millis() - last < 100) {
+    return;
   }
-  return false;
+  *p_centimeters = sonar.ping_cm();
 }
 
-// function called every 60ms, checks distance and if too close calls for a stop
-// function also moves boat forward
 void sensor() {
-  static long last = millis(), start;
-
-  long journey_time;
-  int centimeters = 0;
-
-  // if buggin increase this value
-  if (millis() - last > 60) {
-    start = millis();
-    sensor_ping();
-  }
-
-  if (echo_recieved()) {
-    journey_time = millis() - start;
-  } else {
-    journey_time = 0;
-  }
-
-  if (journey_time > 0) {
-    // formula wants it in micro but journey is in milli
-    centimeters = journey_time * 1000 / 58;
-    Serial.print("cm: ");
-    Serial.print(centimeters);
-    Serial.print('\n');
-  }
-
-  if (centimeters < 10 && centimeters > 0 && !stopped) {
-    abrupt_stop();
-    stopped = true;
+  static int centimeters = 0;
+  get_distance(&centimeters);
+  Serial.print("centimeters: ");
+  Serial.print(centimeters);
+  Serial.print('\n');
+  if (centimeters > 0 && centimeters < 20) {
+    pwm(HBRIDGE_CW, 10000, 0);
   } else {
     forwards();
-    stopped = false;
   }
 }
 
@@ -218,8 +185,8 @@ void setup() {
   pinMode(HBRIDGE_CW, OUTPUT);
   pinMode(HBRIDGE_CCW, OUTPUT);
 
-  pinMode(SENSOR_ECHO, INPUT_PULLDOWN);
-  // pinMode(SENSOR_TRIG, OUTPUT);
+  pinMode(SENSOR_TRIG, OUTPUT);
+  pinMode(SENSOR_ECHO, INPUT);
 }
 
 void loop() {
@@ -246,13 +213,7 @@ void loop() {
   //   digitalWrite(SERVO, LOW);
   //   delayMicroseconds(20000 - uptime);
   // }
-
-  for (int i = -90; i < 90; i++) {
-    turn(i);
-  }
-  for (int i = 90; i > -90; i--) {
-    turn(i);
-  }
+  // delay(500);
 
   /**
    * i think i made this function too powerful but oh well
@@ -260,5 +221,5 @@ void loop() {
    * trying to be too smart with pointers and shii so hopefully its more
    * readable
    */
-  // sensor();
+  sensor();
 }
