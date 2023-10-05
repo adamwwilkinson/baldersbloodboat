@@ -18,26 +18,24 @@ typedef struct struct_message {
 
 struct_message camValue;
 
-// wavelength in milliseconds
-void pwm(int pin, int wave_length, int percentage) {
-  static long last = millis();
-  static boolean up = true;
+bool stopped = false;
 
+// wavelength in microseconds
+void pwm(int pin, int wave_length, float percentage) {
   float uptime = wave_length * percentage / 100.0;
 
   float downtime = wave_length * (100 - percentage) / 100.0;
+  Serial.print("uptime: ");
+  Serial.print(uptime);
+  Serial.print('\n');
+  Serial.print("downtime: ");
+  Serial.print(downtime);
+  Serial.print('\n');
 
-  if (millis() - last > downtime && !up) {
-    digitalWrite(pin, HIGH);
-    up = true;
-    last = millis();
-  }
-
-  if (millis() - last > uptime && up) {
-    digitalWrite(pin, LOW);
-    up = false;
-    last = millis();
-  }
+  digitalWrite(pin, HIGH);
+  delayMicroseconds(uptime);
+  digitalWrite(pin, LOW);
+  delayMicroseconds(downtime);
 }
 
 void forwards() {
@@ -49,24 +47,20 @@ void forwards() {
  * degrees given is degree of servo
  * if wanna turn right servo goes left
  * value of -90 makes servo go left makes boat go right
+ * servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go left)
  **/
 void turn(int degrees) {
-  int degree_to_microseconds = map(degrees, -90, 90, 1000, 2000);
+  int pwm_wavelength = 20000;
 
-  /**
-   * the 200 value here comes from the wavelength of 20ms and the coversion from
-   * microseconds to percentage
-   * ...
-   * fine i wont make it a magic number
-   * jesus dylan
-   **/
-
-  int wavelength_to_percentage_factor = 200;
+  int degree_to_100_percent = map(degrees, -90, 90, 300, 650);
 
   // 1ms pulse is -90 degrees, 1.5 ms pulse is 0 degrees, 2ms pulse is 90
-  int percentage = degree_to_microseconds / wavelength_to_percentage_factor;
+  float percentage = degree_to_100_percent / 100.0;
+  Serial.print("percentage: ");
+  Serial.print(percentage);
+  Serial.print('\n');
 
-  pwm(SERVO, 20, percentage);
+  pwm(SERVO, pwm_wavelength, percentage);
 }
 
 // remove forward momentum by blipping reverse for a second
@@ -77,6 +71,7 @@ void abrupt_stop() {
 
   if (millis() - last > 1000) {
     digitalWrite(HBRIDGE_CCW, LOW);
+    stopped = true;
   }
 }
 
@@ -103,6 +98,7 @@ void sensor() {
   long journey_time;
   int centimeters = 0;
 
+  // if buggin increase this value
   if (millis() - last > 60) {
     start = millis();
     sensor_ping();
@@ -117,12 +113,17 @@ void sensor() {
   if (journey_time > 0) {
     // formula wants it in micro but journey is in milli
     centimeters = journey_time * 1000 / 58;
+    Serial.print("cm: ");
+    Serial.print(centimeters);
+    Serial.print('\n');
   }
 
-  if (centimeters < 10 && centimeters > 0) {
+  if (centimeters < 10 && centimeters > 0 && !stopped) {
     abrupt_stop();
+    stopped = true;
   } else {
     forwards();
+    stopped = false;
   }
 }
 
@@ -146,6 +147,17 @@ void PID_servo() {
   degrees_old = degrees;
 }
 
+void test_servo() {
+  static int degrees = -90;
+  static long last = millis();
+  turn(0);
+  delay(1000);
+  turn(45);
+  delay(1000);
+  turn(90);
+  delay(1000);
+}
+
 // very primitive, probably shit
 void proportional_servo() {
   int current_error = camValue.percent_from_center;
@@ -165,11 +177,11 @@ void servo() {
   if (absolute_percent_from_center < 5) {
     degrees = 0;
   } else if (absolute_percent_from_center >= 20) {
-    degrees = 15
+    degrees = 15;
   } else if (absolute_percent_from_center >= 60) {
-    degrees = 60
+    degrees = 60;
   } else {
-    degrees = 90
+    degrees = 90;
   }
 
   // inverted here as we want to turn the servo the opposite way to the boat
@@ -207,40 +219,40 @@ void setup() {
   pinMode(HBRIDGE_CCW, OUTPUT);
 
   pinMode(SENSOR_ECHO, INPUT_PULLDOWN);
-  pinMode(SENSOR_TRIG, OUTPUT);
+  // pinMode(SENSOR_TRIG, OUTPUT);
 }
 
 void loop() {
-  // just debugging below
-
-  // static int pwm_value_index = 2;
-  // int pwm_values[5] = {-90, -45, 0, 45, 90};
-  // if (digitalRead(BUTTON_L) == LOW && pwm_value_index > 0) {
-  //   Serial.print("-1");
-  //   pwm_value_index--;
-  //   delay(100);
-  // }
-  // if (digitalRead(BUTTON_R) == LOW && pwm_value_index < 4) {
-  //   Serial.print("+1");
-  //   pwm_value_index++;
-  //   delay(100);
-  // }
-  // turn(pwm_values[pwm_value_index]);
-
   /**
    * handles the recieved cam data and turns the boat using a PID controller
    **/
-  PID_servo();
+  // PID_servo();
 
-  /**
-   * handles the recieved cam data and turns the boat depending on the
-   * percentage distance away from center
-   * uses a look up to do this
-   **/
-  // servo();
+  // servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go left)
+  // for (int i = 60; i < 130; i++) {
+  //   int uptime = 10 * i;
 
-  // probably not great but good option to test
-  // proportional_servo();
+  //   digitalWrite(SERVO, HIGH);
+  //   delayMicroseconds(uptime);
+  //   digitalWrite(SERVO, LOW);
+  //   delayMicroseconds(20000 - uptime);
+  // }
+
+  // for (int i = 130; i > 60; i--) {
+  //   int uptime = 10 * i;
+
+  //   digitalWrite(SERVO, HIGH);
+  //   delayMicroseconds(uptime);
+  //   digitalWrite(SERVO, LOW);
+  //   delayMicroseconds(20000 - uptime);
+  // }
+
+  for (int i = -90; i < 90; i++) {
+    turn(i);
+  }
+  for (int i = 90; i > -90; i--) {
+    turn(i);
+  }
 
   /**
    * i think i made this function too powerful but oh well
@@ -248,5 +260,5 @@ void loop() {
    * trying to be too smart with pointers and shii so hopefully its more
    * readable
    */
-  sensor();
+  // sensor();
 }
