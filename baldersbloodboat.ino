@@ -25,14 +25,7 @@ struct_message camValue;
 // wavelength in microseconds
 void pwm(int pin, int wave_length, float percentage) {
   float uptime = wave_length * percentage / 100.0;
-
   float downtime = wave_length * (100 - percentage) / 100.0;
-  // Serial.print("uptime: ");
-  // Serial.print(uptime);
-  // Serial.print('\n');
-  // Serial.print("downtime: ");
-  // Serial.print(downtime);
-  // Serial.print('\n');
 
   digitalWrite(pin, HIGH);
   delayMicroseconds(uptime);
@@ -68,9 +61,9 @@ void abrupt_stop() {
   digitalWrite(HBRIDGE_CW, LOW);
   digitalWrite(HBRIDGE_CCW, HIGH);
 
-  if (millis() - last > 1000) {
-    digitalWrite(HBRIDGE_CCW, LOW);
-  }
+  Serial.print("abrupt stop\n");
+  delay(1000);
+  digitalWrite(HBRIDGE_CCW, LOW);
 }
 
 void get_distance(int* p_centimeters) {
@@ -83,13 +76,19 @@ void get_distance(int* p_centimeters) {
 
 void sensor() {
   static int centimeters = 0;
+  static bool stopped = false;
+
   get_distance(&centimeters);
-  Serial.print("centimeters: ");
-  Serial.print(centimeters);
-  Serial.print('\n');
+
+  // double nesting this is so sad
   if (centimeters > 0 && centimeters < 20) {
-    pwm(HBRIDGE_CW, 10000, 0);
+    if (!stopped) {
+      abrupt_stop();
+      stopped = true;
+    }
   } else {
+    stopped = false;
+    Serial.print("forward\n");
     forwards();
   }
 }
@@ -195,8 +194,8 @@ void loop() {
    **/
   // PID_servo();
 
-  // servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go left)
-  // for (int i = 60; i < 130; i++) {
+  // servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go
+  // left) for (int i = 60; i < 130; i++) {
   //   int uptime = 10 * i;
 
   //   digitalWrite(SERVO, HIGH);
