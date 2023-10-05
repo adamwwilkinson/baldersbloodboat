@@ -1,4 +1,3 @@
-#include <NewPing.h>
 #include <WiFi.h>
 #include <esp_now.h>
 
@@ -12,9 +11,6 @@
 
 #define SENSOR_ECHO 36
 #define SENSOR_TRIG 32
-#define MAX_DISTANCE 400
-
-NewPing sonar(SENSOR_TRIG, SENSOR_ECHO, MAX_DISTANCE);
 
 typedef struct struct_message {
   int percent_from_center;
@@ -62,16 +58,20 @@ void abrupt_stop() {
   digitalWrite(HBRIDGE_CCW, HIGH);
 
   Serial.print("abrupt stop\n");
-  delay(1000);
+  delay(500);
   digitalWrite(HBRIDGE_CCW, LOW);
 }
 
 void get_distance(int* p_centimeters) {
-  static long last = millis();
-  if (millis() - last < 100) {
-    return;
-  }
-  *p_centimeters = sonar.ping_cm();
+  long duration;
+  digitalWrite(SENSOR_TRIG, LOW);
+  delayMicroseconds(5);
+  digitalWrite(SENSOR_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(SENSOR_TRIG, LOW);
+
+  duration = pulseIn(SENSOR_ECHO, HIGH);
+  *p_centimeters = (duration / 2) / 29.1;
 }
 
 void sensor() {
@@ -79,6 +79,9 @@ void sensor() {
   static bool stopped = false;
 
   get_distance(&centimeters);
+  Serial.print("centimeters: ");
+  Serial.print(centimeters);
+  Serial.print('\n');
 
   // double nesting this is so sad
   if (centimeters > 0 && centimeters < 20) {
