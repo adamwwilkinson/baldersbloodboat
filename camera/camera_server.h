@@ -1,1 +1,1 @@
-extern float readRGBImage();
+extern int findRedDot();

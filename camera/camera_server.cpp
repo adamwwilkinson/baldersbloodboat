@@ -4,7 +4,7 @@
 #include "camera.h"
 #include "camera_utils.h"
 
-float readRGBImage() {
+int findRedDot() {
   static int desired = 0;
   static int threshold = 30;
 
