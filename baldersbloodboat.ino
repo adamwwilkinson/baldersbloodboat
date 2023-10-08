@@ -117,14 +117,12 @@ void PID_servo() {
 }
 
 void test_servo() {
-  static int degrees = -90;
-  static long last = millis();
-  turn(0);
-  delay(1000);
-  turn(45);
-  delay(1000);
-  turn(90);
-  delay(1000);
+  for (int i = -90; i < 90; i++) {
+    turn(i);
+  }
+  for (int i = 90; i > -90; i--) {
+    turn(i);
+  }
 }
 
 // very primitive, probably shit
@@ -197,25 +195,9 @@ void loop() {
    **/
   // PID_servo();
 
-  // servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go
-  // left) for (int i = 60; i < 130; i++) {
-  //   int uptime = 10 * i;
-
-  //   digitalWrite(SERVO, HIGH);
-  //   delayMicroseconds(uptime);
-  //   digitalWrite(SERVO, LOW);
-  //   delayMicroseconds(20000 - uptime);
-  // }
-
-  // for (int i = 130; i > 60; i--) {
-  //   int uptime = 10 * i;
-
-  //   digitalWrite(SERVO, HIGH);
-  //   delayMicroseconds(uptime);
-  //   digitalWrite(SERVO, LOW);
-  //   delayMicroseconds(20000 - uptime);
-  // }
-  // delay(500);
+  test_servo();
+  Serial.print("camValue: ");
+  Serial.println(camValue.percent_from_center);
 
   /**
    * i think i made this function too powerful but oh well
@@ -223,5 +205,5 @@ void loop() {
    * trying to be too smart with pointers and shii so hopefully its more
    * readable
    */
-  sensor();
+  // sensor();
 }
