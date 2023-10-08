@@ -281,7 +281,7 @@ void readRGBImage() {
   }
 
   // get hues
-  bool mask[PIXEL_COUNT] = {0};
+  bool *mask = (bool *)heap_caps_malloc(PIXEL_COUNT, MALLOC_CAP_SPIRAM);
   imageToMask(mask, PIXEL_COUNT, rgb, ARRAY_LENGTH, desired, threshold);
 
   // get histogram
@@ -302,8 +302,9 @@ void readRGBImage() {
   sendFooter(client);                            // close web page
 
   // finished with the data so free up the memory space used in psram
-  esp_camera_fb_return(fb);  // camera frame buffer
   heap_caps_free(ptrVal);    // rgb data
+  esp_camera_fb_return(fb);  // camera frame buffer
+  heap_caps_free(mask);
 }
 
 bool handleJPG() {
