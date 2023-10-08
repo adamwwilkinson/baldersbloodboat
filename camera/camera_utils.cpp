@@ -5,43 +5,33 @@
 
 // https://gist.github.com/ciembor/1494530
 // Takes rgb values [0, 255]
-// Returns hsl struct with values [0, 1]
-HSL rgb2hsl(float r, float g, float b) {
-  HSL result;
-
-  r /= 255;
-  g /= 255;
-  b /= 255;
-
-  float colourMax = max(max(r, g), b);
+// Returns hue integer from [0, 360]
+int rgb2hsl(int r, int g, int b) {
   float colourMin = min(min(r, g), b);
+  float colourMax = max(max(r, g), b);
 
-  result.h = result.s = result.l = (colourMax + colourMin) / 2;
-
-  if (colourMax == colourMin) {
-    result.h = result.s = 0;
-  } else {
-    float d = colourMax - colourMin;
-    result.s = (result.l > 0.5) ? d / (2 - colourMax - colourMin)
-                                : d / (colourMax + colourMin);
-
-    if (colourMax == r) {
-      result.h = (g - b) / d + (g < b ? 6 : 0);
-    } else if (colourMax == g) {
-      result.h = (b - r) / d + 2;
-    } else if (colourMax == b) {
-      result.h = (r - g) / d + 4;
-    }
-
-    result.h /= 6;
+  if (colourMin == colourMax) {
+    return 0;
   }
 
-  return result;
+  float hue = 0;
+  if (colourMax == r) {
+    hue = (g - b) / (colourMax - colourMin);
+  } else if (colourMax == g) {
+    hue = 2.0 + (b - r) / (colourMax - colourMin);
+
+  } else {
+    hue = 4.0 + (r - g) / (colourMax - colourMin);
+  }
+
+  hue = hue * 60;
+  if (hue < 0) hue = hue + 360;
+  return round(hue);
 }
 
-bool filter(float hue, float desired, float threshold) {
-  float diff = abs(hue - desired);
-  return (diff < threshold || 1 - diff < threshold) && (hue != 0);
+bool filter(int hue, int desired, int threshold) {
+  int diff = abs(hue - desired);
+  return (diff < threshold || 1 - diff < threshold);
 }
 
 /**
@@ -56,22 +46,21 @@ bool filter(float hue, float desired, float threshold) {
  * @param threshold The threshold for the hue filter
  */
 void imageToMask(bool mask[], const size_t maskLength, const uint8_t *imageData,
-                 const size_t imageDataLength, const float desired,
-                 const float threshold) {
-  int j = 0;
-  for (int i = 0; i < imageDataLength - 2; i += 3) {
+                 const size_t imageDataLength, const int desired,
+                 const int threshold) {
+  size_t j = 0;
+  for (size_t i = 0; i < imageDataLength - 2; i += 3) {
     if (j >= maskLength) {
       break;
     }
 
-    uint8_t r = imageData[i];
+    uint8_t r = imageData[i + 2];
     uint8_t g = imageData[i + 1];
-    uint8_t b = imageData[i + 2];
+    uint8_t b = imageData[i + 0];
 
-    HSL hsl = rgb2hsl(r, g, b);
+    int hue = rgb2hsl(r, g, b);
 
-    // only use the hue for now
-    if (filter(hsl.h, desired, threshold)) {
+    if (filter(hue, desired, threshold)) {
       mask[j++] = 1;
     } else {
       mask[j++] = 0;

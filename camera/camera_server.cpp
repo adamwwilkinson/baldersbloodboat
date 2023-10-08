@@ -5,8 +5,8 @@
 #include "camera_utils.h"
 
 float readRGBImage() {
-  static float desired = 135 / 255.0;
-  static float threshold = 10 / 255.0;
+  static int desired = 0;
+  static int threshold = 30;
 
   // make sure psram is available
   if (!psramFound()) {
@@ -70,13 +70,28 @@ float readRGBImage() {
                  String(millis() - tTimer) +
                  " ms");  // report how long the conversion took
 
+  // find hue value of center pixel
+  int centerPixelIndex = (IMAGE_WIDTH * IMAGE_HEIGHT) / 2;
+  int centerPixelR = rgb[centerPixelIndex * 3 + 2];
+  int centerPixelG = rgb[centerPixelIndex * 3 + 1];
+  int centerPixelB = rgb[centerPixelIndex * 3 + 0];
+  int centerPixelHue = rgb2hsl(centerPixelR, centerPixelG, centerPixelB);
+  Serial.println("Center pixel hue: " + String(centerPixelHue));
+  Serial.println("Center pixel RGB: " + String(centerPixelR) + ", " +
+                 String(centerPixelG) + ", " + String(centerPixelB));
+
   // get hues
-  bool mask[PIXEL_COUNT] = {0};
+  tTimer = millis();
+  bool *mask = (bool *)heap_caps_malloc(PIXEL_COUNT, MALLOC_CAP_SPIRAM);
+  ;
   imageToMask(mask, PIXEL_COUNT, rgb, ARRAY_LENGTH, desired, threshold);
+  Serial.println("Conversion to mask took " + String(millis() - tTimer) +
+                 " ms");
 
   // get histogram
   uint8_t histogram[IMAGE_WIDTH] = {0};
   maskToHistogram(histogram, IMAGE_WIDTH, mask, PIXEL_COUNT);
+  Serial.println("Calulated histogram");
 
   // get max
   int maxIndex = findMaxIndex(histogram, IMAGE_WIDTH);
@@ -92,5 +107,6 @@ float readRGBImage() {
   // finished with the data so free up the memory space used in psram
   esp_camera_fb_return(fb);  // camera frame buffer
   heap_caps_free(ptrVal);    // rgb data
+  heap_caps_free(mask);
   return percentage;
 }

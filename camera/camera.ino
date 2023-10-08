@@ -17,7 +17,7 @@ typedef struct struct_message {
   int a;
 } struct_message;
 
-const uint8_t broadcastAddress[] = {0xC8, 0xC9, 0xA3, 0xFC, 0x84, 0xF0};
+const uint8_t broadcastAddress[] = {0xC8, 0xC9, 0xA3, 0xFC, 0x8A, 0x48};
 esp_now_peer_info_t peerInfo;
 
 const char *stitle = "ESP32Cam";  // title of this sketch
@@ -143,10 +143,10 @@ void setup() {
 
   // startup complete
   Serial.println("\nStarted...");
-  flashLED(2);    // flash the onboard indicator led
-  brightLed(64);  // change bright LED
-  delay(200);
-  brightLed(0);  // change bright LED
+  // flashLED(2);    // flash the onboard indicator led
+  // brightLed(64);  // change bright LED
+  // delay(200);
+  // brightLed(0);  // change bright LED
 }
 
 // ! Here is the money
