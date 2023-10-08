@@ -62,9 +62,9 @@ void imageToMask(bool mask[], const size_t maskLength, const uint8_t *imageData,
       break;
     }
 
-    uint8_t r = imageData[i];
+    uint8_t r = imageData[i+2];
     uint8_t g = imageData[i+1];
-    uint8_t b = imageData[i+2];
+    uint8_t b = imageData[i+0];
 
     HSL hsl = rgb2hsl(r, g, b);
 

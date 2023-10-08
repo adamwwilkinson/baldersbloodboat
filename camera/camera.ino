@@ -13,8 +13,8 @@
 #include "camera_server.h"
 #include "camera.h"
 
-#define SSID_NAME "Telstra1B1452"
-#define SSID_PASWORD "dawetwyavxf6"
+#define SSID_NAME "Pixel 6a"
+#define SSID_PASWORD "dylan123"
 
 char *stitle = "ESP32Cam";  // title of this sketch
 char *sversion = "1.0";     // Sketch version
