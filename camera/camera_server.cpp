@@ -39,10 +39,10 @@ float readRGBImage() {
   void *ptrVal =
       NULL;  // create a pointer for memory location to store the data
 
-  uint32_t IMAGE_WIDTH = fb->width;
-  uint32_t IMAGE_HEIGHT = fb->height;
-  uint32_t PIXEL_COUNT = IMAGE_WIDTH * IMAGE_HEIGHT;
-  uint32_t ARRAY_LENGTH =
+  int IMAGE_WIDTH = fb->width;
+  int IMAGE_HEIGHT = fb->height;
+  int PIXEL_COUNT = IMAGE_WIDTH * IMAGE_HEIGHT;
+  int ARRAY_LENGTH =
       PIXEL_COUNT * 3;  // calculate memory required to store the RGB data (i.e.
                         // number of pixels in the jpg image x 3)
 
@@ -70,16 +70,6 @@ float readRGBImage() {
                  String(millis() - tTimer) +
                  " ms");  // report how long the conversion took
 
-  // find hue value of center pixel
-  int centerPixelIndex = (IMAGE_WIDTH * IMAGE_HEIGHT) / 2;
-  int centerPixelR = rgb[centerPixelIndex * 3 + 2];
-  int centerPixelG = rgb[centerPixelIndex * 3 + 1];
-  int centerPixelB = rgb[centerPixelIndex * 3 + 0];
-  int centerPixelHue = rgb2hsl(centerPixelR, centerPixelG, centerPixelB);
-  Serial.println("Center pixel hue: " + String(centerPixelHue));
-  Serial.println("Center pixel RGB: " + String(centerPixelR) + ", " +
-                 String(centerPixelG) + ", " + String(centerPixelB));
-
   // get hues
   tTimer = millis();
   bool *mask = (bool *)heap_caps_malloc(PIXEL_COUNT, MALLOC_CAP_SPIRAM);
@@ -91,13 +81,12 @@ float readRGBImage() {
   // get histogram
   uint8_t histogram[IMAGE_WIDTH] = {0};
   maskToHistogram(histogram, IMAGE_WIDTH, mask, PIXEL_COUNT);
-  Serial.println("Calulated histogram");
 
   // get max
   int maxIndex = findMaxIndex(histogram, IMAGE_WIDTH);
 
   // get percentage from center
-  float percentage = (float)(maxIndex - (IMAGE_WIDTH / 2)) / (float)IMAGE_WIDTH;
+  int percentage = (maxIndex - IMAGE_WIDTH / 2) * 100 / (IMAGE_WIDTH / 2);
 
   Serial.println("Desired hue: " + String(desired));
   Serial.println("Threshold: " + String(threshold));

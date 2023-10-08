@@ -13,6 +13,13 @@
 #include "driver/ledc.h"
 #include "esp_camera.h"
 
+// sd-card
+#include <FS.h>  // gives file access
+#include <SPI.h>
+
+#include "SD_MMC.h"  // sd card - see https://randomnerdtutorials.com/esp32-cam-take-photo-save-microsd-card/
+#define SD_CS 5      // sd chip select pin = 5
+
 typedef struct struct_message {
   int a;
 } struct_message;
@@ -53,6 +60,8 @@ const int serialSpeed = 115200;  // Serial data speed to use
 uint32_t lastStatus =
     millis();  // last time status light changed status (to flash all ok led)
 String imageResDetails = "Unknown";  // image resolution info
+bool sdcardPresent;                  // flag if an sd card is detected
+int imageCounter;                    // image file name on sd card counter
 
 // Random utility functions that I couldn't figure out how to separate
 void flashLED(int reps) {
@@ -158,12 +167,12 @@ void loop() {
                  !digitalRead(indicatorLED));  // flip indicator led status
   }
 
-  int percentage = (int)(readRGBImage() * 100);
+  int percentage = readRGBImage();
   struct_message data = {percentage};
   esp_err_t result =
       esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(struct_message));
 
-  usleep(1000000);  // sleep for 1 second
+  usleep(1000000);  // sleep for 10 second
 }
 
 bool initialiseCamera() {
@@ -197,7 +206,7 @@ bool initialiseCamera() {
                          //              800x600 (SVGA), 1024x768 (XGA),
                          //              1280x1024 (SXGA), 1600x1200 (UXGA)
   config.jpeg_quality =
-      12;  // 0-63 lower number means higher quality (can cause failed image
+      63;  // 0-63 lower number means higher quality (can cause failed image
            // capture if set too low at higher resolutions)
   config.fb_count =
       1;  // if more than one, i2s runs in continuous mode. Use only with JPEG

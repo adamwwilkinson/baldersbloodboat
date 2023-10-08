@@ -31,7 +31,7 @@ int rgb2hsl(int r, int g, int b) {
 
 bool filter(int hue, int desired, int threshold) {
   int diff = abs(hue - desired);
-  return (diff < threshold || 1 - diff < threshold);
+  return (diff < threshold);
 }
 
 /**
