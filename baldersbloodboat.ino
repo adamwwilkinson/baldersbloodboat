@@ -1,9 +1,6 @@
 #include <WiFi.h>
 #include <esp_now.h>
 
-#define BUTTON_L 0
-#define BUTTON_R 35
-
 #define SERVO 2
 
 #define HBRIDGE_CW 12
@@ -53,11 +50,9 @@ void turn(int degrees) {
 
 // remove forward momentum by blipping reverse for a second
 void abrupt_stop() {
-  static long last = millis();
   digitalWrite(HBRIDGE_CW, LOW);
   digitalWrite(HBRIDGE_CCW, HIGH);
 
-  Serial.print("abrupt stop\n");
   delay(500);
   digitalWrite(HBRIDGE_CCW, LOW);
 }
@@ -176,9 +171,6 @@ void setup() {
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
-
-  pinMode(BUTTON_L, INPUT_PULLUP);
-  pinMode(BUTTON_R, INPUT_PULLUP);
 
   pinMode(SERVO, OUTPUT);
 
