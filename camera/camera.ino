@@ -56,8 +56,8 @@
 
 //         Enter your Wifi Settings here
 
-#define SSID_NAME "NetComm 6339"
-#define SSID_PASWORD "Josikocile"
+#define SSID_NAME "Telstra1B1452"
+#define SSID_PASWORD "dawetwyavxf6"
 
 //   ---------------------------------------------------------------------------------------------------------
 
@@ -113,14 +113,14 @@ const bool serialDebug = 1;  // show debug info. on serial port (1=enabled,
 // Camera related
 bool flashRequired = 1;  // If flash to be used when capturing image (1 = yes)
 framesize_t FRAME_SIZE_IMAGE =
-    FRAMESIZE_SVGA;  // Image resolution:
-                     //               default = "const framesize_t
-                     //               FRAME_SIZE_IMAGE = FRAMESIZE_VGA" 160x120
-                     //               (QQVGA), 128x160 (QQVGA2), 176x144 (QCIF),
-                     //               240x176 (HQVGA), 320x240 (QVGA), 400x296
-                     //               (CIF), 640x480 (VGA, default), 800x600
-                     //               (SVGA), 1024x768 (XGA), 1280x1024 (SXGA),
-                     //               1600x1200 (UXGA)
+    FRAMESIZE_VGA;  // Image resolution:
+                    //               default = "const framesize_t
+                    //               FRAME_SIZE_IMAGE = FRAMESIZE_VGA" 160x120
+                    //               (QQVGA), 128x160 (QQVGA2), 176x144 (QCIF),
+                    //               240x176 (HQVGA), 320x240 (QVGA), 400x296
+                    //               (CIF), 640x480 (VGA, default), 800x600
+                    //               (SVGA), 1024x768 (XGA), 1280x1024 (SXGA),
+                    //               1600x1200 (UXGA)
 #define PIXFORMAT \
   PIXFORMAT_JPEG;  // image format, Options =  YUV422, GRAYSCALE, RGB565, JPEG,
                    // RGB888
@@ -407,6 +407,7 @@ void setup() {
 
 void loop() {
   server.handleClient();  // handle any incoming web page requests
+  yield();
 
   //                           <<< YOUR CODE HERE >>>
 
@@ -466,7 +467,7 @@ bool initialiseCamera() {
                          //              800x600 (SVGA), 1024x768 (XGA),
                          //              1280x1024 (SXGA), 1600x1200 (UXGA)
   config.jpeg_quality =
-      12;  // 0-63 lower number means higher quality (can cause failed image
+      10;  // 10-63 lower number means higher quality (can cause failed image
            // capture if set too low at higher resolutions)
   config.fb_count =
       1;  // if more than one, i2s runs in continuous mode. Use only with JPEG
@@ -528,6 +529,8 @@ bool cameraImageSettings() {
     s->set_exposure_ctrl(s, 1);  // auto exposure on
     s->set_awb_gain(s, 1);       // Auto White Balance enable (0 or 1)
     s->set_brightness(s, cameraImageBrightness);  // (-2 to 2) - set brightness
+    s->set_contrast(s, 2);
+    s->set_sharpness(s, -2);
   } else {
     // Apply manual settings
     s->set_gain_ctrl(s, 0);      // auto gain off
@@ -1356,16 +1359,17 @@ void readRGBImage() {
     sendText(client, "Free memory=" + String(ESP.getFreeHeap()) + " bytes");
   }
 
-  /*
-     // display captured image using base64 - seems a bit unreliable especially
-     with larger images? if (!sendRGBfile) { client.print("<br>Displaying image
-     direct from frame buffer"); String base64data = base64::encode(fb->buf,
-     fb->len);      // convert buffer to base64 client.print(" - Base64 data
-     length = " + String(base64data.length()) + " bytes\n" );
-        client.print("<br><img src='data:image/jpg;base64," + base64data +
-     "'></img><br>\n");
-      }
-  */
+  // // display captured image using base64 - seems a bit unreliable especially
+  // // with larger images?
+  // if (!sendRGBfile) {
+  //   client.print("<br>Displaying image direct from frame buffer");
+  //   String base64data =
+  //       base64::encode(fb->buf, fb->len);  // convert buffer to base64
+  //   client.print(" - Base64 data length = " + String(base64data.length()) +
+  //                " bytes\n");
+  //   client.print("<br><img src='data:image/jpg;base64," + base64data +
+  //                "'></img><br>\n");
+  // }
 
   // allocate memory to store the rgb data (in psram, 3 bytes per pixel)
   sendText(client,
@@ -1699,6 +1703,25 @@ void handleJpeg() {
 void handleTest() {
   WiFiClient client = server.client();  // open link with client
 
+  // capture a live image from camera (as a jpg)
+  camera_fb_t *fb = NULL;
+  unsigned long tTimer = millis();
+  fb = esp_camera_fb_get();
+
+  if (!fb) {
+    Serial.println("error: failed to capture image from camera");
+    client.stop();
+    return;
+  } else {
+    Serial.println("JPG image capture took " + String(millis() - tTimer) +
+                   " ms");  // report time it took to capture an image
+    Serial.println("Image resolution=" + String(fb->width) + "x" +
+                   String(fb->height));
+    Serial.println("Image size=" + String(fb->len) + " bytes");
+    Serial.println("Image format=" + String(fb->format));
+    Serial.println("Free memory=" + String(ESP.getFreeHeap()) + " bytes");
+  }
+
   // log page request including clients IP
   IPAddress cIP = client.remoteIP();
   if (serialDebug) Serial.println("Test page requested by " + cIP.toString());
@@ -1706,23 +1729,33 @@ void handleTest() {
   // html header
   sendHeader(client, "Testing");
 
-  // html body
-
   // -------------------------------------------------------------------
 
   // test code goes here
-  int maxIndex = findRedDot();
+  int maxIndex = findRedDot(fb);
 
   // demo of drawing on the camera image using javascript / html canvas
   //   could be of use to show area of interest on the image etc. - see
   //   https://www.w3schools.com/html/html5_canvas.asp
   // creat a DIV and put image in it with a html canvas on top of it
-  int imageWidth = 800;  // image dimensions on web page
-  int imageHeight = 600;
+  int imageWidth = 640;  // image dimensions on web page
+  int imageHeight = 480;
+
+  String base64data =
+      base64::encode(fb->buf, fb->len);  // convert buffer to base64
+  Serial.println("Base64 data length = " + String(base64data.length()) +
+                 " bytes");
+
   client.println("<div style='display:inline-block;position:relative;'>");
   client.println(
-      "<img style='position:absolute;z-index:10;' src='/jpg' width='" +
-      String(imageWidth) + "' height='" + String(imageHeight) + "' />");
+      "<img style='position:absolute;z-index:10;' "
+      "src='data:image/jpg;base64," +
+      base64data + "' width='" + String(imageWidth) + "' height='" +
+      String(imageHeight) + "'></img>");
+
+  // client.println(
+  //     "<img style='position:absolute;z-index:10;' src='/jpg' width='" +
+  //     String(imageWidth) + "' height='" + String(imageHeight) + "' />");
   client.println(
       "<canvas style='position:relative;z-index:20;' id='myCanvas' width='" +
       String(imageWidth) + "' height='" + String(imageHeight) + "'></canvas>");
@@ -1738,7 +1771,10 @@ void handleTest() {
       var ctx = c.getContext("2d");
       ctx.strokeStyle = "red";
     // draw on image
-      ctx.rect(maxIndex - 20, imageHeight / 2 - 20, maxIndex + 20, imageHeight / 2 + 20); // box
+      ctx.beginPath();
+      ctx.moveTo(maxIndex, 0);
+      ctx.lineTo(maxIndex, imageHeight);
+      ctx.stroke();
       ctx.font = "30px Arial";  ctx.fillText(maxIndex, 50, imageHeight - 50);    // text
       ctx.stroke();
    </script>\n)=====");
