@@ -1,27 +1,25 @@
-// this is is just so other files can read these global variables, everything is defined in camera.ino
+// this is is just so other files can read these global variables, everything is
+// defined in camera.ino
 #include <stdint.h>
-#include <WebServer.h>
+
 #include "esp_camera.h"
 
-extern char *stitle;    // title of this sketch
-extern char *sversion;  // Sketch version
-
-extern bool sendRGBfile;  // if set '/rgb' will just return raw rgb data which can be saved as a file rather than display a HTML page
-
-extern uint16_t dataRefresh;   // how often to refresh data on root web page (seconds)
-extern uint16_t imageRefresh;  // how often to refresh the image on root web page (seconds)
-
-extern const bool serialDebug;  // show debug info. on serial port (1=enabled, disable if using pins 1 and 3 as gpio)
+extern const char *stitle;    // title of this sketch
+extern const char *sversion;  // Sketch version
 
 // Camera related
-extern bool flashRequired;            // If flash to be used when capturing image (1 = yes)
+extern bool
+    flashRequired;  // If flash to be used when capturing image (1 = yes)
 extern framesize_t FRAME_SIZE_IMAGE;  // Resolution
 #define PIXFORMAT PIXFORMAT_JPEG;     // TODO: investigate RGB888
-extern int cameraImageExposure;       // Camera exposure (0 - 1200)   If gain and exposure both set to zero then auto adjust is enabled
-extern int cameraImageGain;           // Image gain (0 - 30)
-extern int cameraImageBrightness;     // Image brightness (-2 to +2)
+extern int
+    cameraImageExposure;  // Camera exposure (0 - 1200)   If gain and exposure
+                          // both set to zero then auto adjust is enabled
+extern int cameraImageGain;        // Image gain (0 - 30)
+extern int cameraImageBrightness;  // Image brightness (-2 to +2)
 
-extern const int timeBetweenStatus;  // speed of flashing system running ok status light (milliseconds)
+extern const int timeBetweenStatus;  // speed of flashing system running ok
+                                     // status light (milliseconds)
 
 extern const int indicatorLED;  // onboard small LED pin (33)
 
@@ -37,19 +35,9 @@ extern const int iopinB;  // general io pin 12 (must not be high at boot)
 
 extern const int serialSpeed;  // Serial data speed to use
 
-extern WebServer server;
-
-extern uint32_t lastStatus;     // last time status light changed status (to flash all ok led)
+extern uint32_t
+    lastStatus;  // last time status light changed status (to flash all ok led)
 extern String imageResDetails;  // image resolution info
-
-extern struct tm timeinfo;
-extern const char *ntpServer;
-extern const char *TZ_INFO;
-extern long unsigned lastNTPtime;
-extern time_t now;
-
-// Random extra functions
-extern bool getNTPtime(int sec);
 
 // https://randomnerdtutorials.com/esp32-cam-camera-pin-gpios/
 #define CAMERA_MODEL_AI_THINKER
@@ -69,3 +57,6 @@ extern bool getNTPtime(int sec);
 #define VSYNC_GPIO_NUM 25  // vsync_pin
 #define HREF_GPIO_NUM 23   // href_pin
 #define PCLK_GPIO_NUM 22   // pixel_clock_pin
+
+#define ERROR_CATASTROPHIC -999
+#define ERROR_NOTHING_DETECTED -998

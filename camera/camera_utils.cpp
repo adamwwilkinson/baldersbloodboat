@@ -1,91 +1,123 @@
+#include "camera_utils.h"
+
 #include <Arduino.h>
 #include <stdint.h>
-#include "camera_utils.h"
 
 // https://gist.github.com/ciembor/1494530
 // Takes rgb values [0, 255]
-// Returns hsl struct with values [0, 1]
-HSL rgb2hsl(float r, float g, float b) {
-  HSL result;
-  
-  r /= 255;
-  g /= 255;
-  b /= 255;
-  
-  float colourMax = max(max(r,g),b);
-  float colourMin = min(min(r,g),b);
-  
-  result.h = result.s = result.l = (colourMax + colourMin) / 2;
+// Returns HSL values from 0 to 1
+// HSL rgb2hsl(float r, float g, float b) {
+//   HSL result = {0, 0, 0};
 
-  if (colourMax == colourMin) {
-    result.h = result.s = 0;
-  }
-  else {
-    float d = colourMax - colourMin;
-    result.s = (result.l > 0.5) ? d / (2 - colourMax - colourMin) : d / (colourMax + colourMin);
-    
-    if (colourMax == r) {
-      result.h = (g - b) / d + (g < b ? 6 : 0);
-    }
-    else if (colourMax == g) {
-      result.h = (b - r) / d + 2;
-    }
-    else if (colourMax == b) {
-      result.h = (r - g) / d + 4;
-    }
-    
-    result.h /= 6;
+//   r /= 255;
+//   g /= 255;
+//   b /= 255;
+
+//   float colourMin = min(min(r, g), b);
+//   float colourMax = max(max(r, g), b);
+
+//   result.h = result.s = result.l = (colourMax + colourMin) / 2;
+
+//   if (colourMax == colourMin) {
+//     result.h = result.s = 0;  // achromatic
+//   } else {
+//     float d = colourMax - colourMin;
+//     result.s = result.l > 0.5 ? d / (2 - colourMax - colourMin)
+//                               : d / (colourMax + colourMin);
+
+//     if (colourMax == r) {
+//       result.h = (g - b) / d + (g < b ? 6 : 0);
+//     } else if (colourMax == g) {
+//       result.h = (b - r) / d + 2;
+//     } else if (colourMax == b) {
+//       result.h = (r - g) / d + 4;
+//     }
+
+//     result.h /= 6;
+//   }
+
+//   return result;
+// }
+
+// Values are akk frin 0 to 255
+HSV rgb2hsv(RGB rgb) {
+  HSV hsv;
+  unsigned char rgbMin, rgbMax;
+
+  rgbMin = rgb.r < rgb.g ? (rgb.r < rgb.b ? rgb.r : rgb.b)
+                         : (rgb.g < rgb.b ? rgb.g : rgb.b);
+  rgbMax = rgb.r > rgb.g ? (rgb.r > rgb.b ? rgb.r : rgb.b)
+                         : (rgb.g > rgb.b ? rgb.g : rgb.b);
+
+  hsv.v = rgbMax;
+  if (hsv.v == 0) {
+    hsv.h = 0;
+    hsv.s = 0;
+    return hsv;
   }
 
-  return result;
+  hsv.s = 255 * long(rgbMax - rgbMin) / hsv.v;
+  if (hsv.s == 0) {
+    hsv.h = 0;
+    return hsv;
+  }
+
+  if (rgbMax == rgb.r)
+    hsv.h = 0 + 43 * (rgb.g - rgb.b) / (rgbMax - rgbMin);
+  else if (rgbMax == rgb.g)
+    hsv.h = 85 + 43 * (rgb.b - rgb.r) / (rgbMax - rgbMin);
+  else
+    hsv.h = 171 + 43 * (rgb.r - rgb.g) / (rgbMax - rgbMin);
+
+  return hsv;
 }
 
-bool filter(float hue, float desired, float threshold) {
-  float diff = abs(hue - desired);
-  return (diff < threshold || 1-diff < threshold) && (hue != 0);
+bool filter(int hue, int hueDesired, int hueThreshold, int sat,
+            int satThreshold, int value, int valueThreshold) {
+  int hueDiff = abs(hue - hueDesired);
+  return (hueDiff < hueThreshold) && (sat > satThreshold) &&
+         (value > valueThreshold);
 }
 
-/**
- * @brief Given an rgb image, convert it to a mask of 1s and 0s
- * 
- * @param mask Pointer to the mask array to write to (1s and 0s)
- * @param maskLength Length of the mask array
- * @param imageData Pointer to the image data array. The array should be in the format [b, g, r, b, g, r, ...]
- * @param imageDataLength Length of the image data array
- * @param desired The desired hue to filter for
- * @param threshold The threshold for the hue filter
- */
-void imageToMask(bool mask[], const size_t maskLength, const uint8_t *imageData, const size_t imageDataLength, const float desired, const float threshold) {
-  int j = 0;
-  for (int i = 0; i < imageDataLength - 2; i += 3) {
+unsigned long imageToMask(bool mask[], const size_t maskLength,
+                          const uint8_t *imageData,
+                          const size_t imageDataLength, const int hueDesired,
+                          const int hueThreshold, const int satThreshold,
+                          const int valueThreshold) {
+  size_t j = 0;
+  size_t total = 0;
+  for (size_t i = 0; i < imageDataLength - 2; i += 3) {
     if (j >= maskLength) {
       break;
     }
 
-    uint8_t r = imageData[i+2];
-    uint8_t g = imageData[i+1];
-    uint8_t b = imageData[i+0];
+    uint8_t r = imageData[i + 2];
+    uint8_t g = imageData[i + 1];
+    uint8_t b = imageData[i + 0];
+    RGB rgb = {r, g, b};
 
-    HSL hsl = rgb2hsl(r, g, b);
+    HSV hsv = rgb2hsv(rgb);
 
-    // only use the hue for now
-    if (filter(hsl.h, desired, threshold)) {
-      mask[j++] = 1;
-    } else {
-      mask[j++] = 0;
-    }
+    bool res = filter(hsv.h, hueDesired, hueThreshold, hsv.s, satThreshold,
+                      hsv.v, valueThreshold);
+    total += res;
+    mask[j++] = res;
   }
+
+  return total;
 }
 
 /**
  * @brief Given the mask of an image, convert it to a histogram
- * 
+ *
  * @param histogram The histogram array to write to
- * @param histogramLength The length of the histogram array or width of the image
+ * @param histogramLength The length of the histogram array or width of the
+ * image
  * @param mask The mask array to read from (1s and 0s)
  * @param maskLength The length of the mask array or width of the image
  */
-void maskToHistogram(uint8_t histogram[], const size_t histogramLength, const bool mask[], const size_t maskLength) {
+void maskToHistogram(uint8_t histogram[], const size_t histogramLength,
+                     const bool mask[], const size_t maskLength) {
   for (int i = 0; i < maskLength; i++) {
     if (mask[i] == 1) {
       histogram[i % histogramLength]++;
@@ -94,11 +126,14 @@ void maskToHistogram(uint8_t histogram[], const size_t histogramLength, const bo
 }
 
 /**
- * @brief Given a histogram, find the index of the maximum value (the x coordinate of the center of the detected object)
- * 
+ * @brief Given a histogram, find the index of the maximum value (the x
+ * coordinate of the center of the detected object)
+ *
  * @param histogram The histogram array to read from
- * @param histogramLength The length of the histogram array or width of the image
- * @return int The index of the maximum value or x coordinate of the center of the detected object
+ * @param histogramLength The length of the histogram array or width of the
+ * image
+ * @return int The index of the maximum value or x coordinate of the center of
+ * the detected object
  */
 int findMaxIndex(const uint8_t histogram[], const size_t histogramLength) {
   int maxIndex = 0;
