@@ -121,6 +121,7 @@ int detectDot() {
   Serial.println("Percentage from center: " + String(percentage));
 
   // finished with the data so free up the memory space used in psram
+  heap_caps_free(ptrVal);    // rgb data
   esp_camera_fb_return(fb);  // camera frame buffer
   heap_caps_free(ptrVal);    // rgb data
   heap_caps_free(mask);
