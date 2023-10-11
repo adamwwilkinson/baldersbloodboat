@@ -154,7 +154,9 @@ void loop() {
                  !digitalRead(indicatorLED));  // flip indicator led status
   }
 
+  uint32_t tTimer = millis();
   int percentage = detectDot();
+  Serial.println("Detection took " + String(millis() - tTimer) + " ms");
   struct_message data = {percentage};
   esp_err_t result =
       esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(struct_message));
