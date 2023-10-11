@@ -75,8 +75,8 @@ HSV rgb2hsv(RGB rgb) {
 bool filter(int hue, int hueDesired, int hueThreshold, int sat,
             int satThreshold, int value, int valueThreshold) {
   int hueDiff = abs(hue - hueDesired);
-  return (hueDiff < hueThreshold) && (sat > satThreshold) &&
-         (value > valueThreshold);
+  return (hueDiff < hueThreshold || 255 - hueDiff < hueThreshold) &&
+         (sat > satThreshold) && (value > valueThreshold);
 }
 
 unsigned long imageToMask(bool mask[], const size_t maskLength,
