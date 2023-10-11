@@ -57,3 +57,6 @@ extern String imageResDetails;  // image resolution info
 #define VSYNC_GPIO_NUM 25  // vsync_pin
 #define HREF_GPIO_NUM 23   // href_pin
 #define PCLK_GPIO_NUM 22   // pixel_clock_pin
+
+#define ERROR_CATASTROPHIC -999
+#define ERROR_NOTHING_DETECTED -998

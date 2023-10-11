@@ -8,18 +8,37 @@ const int hueDesired = 0;
 const int hueThreshold = 25;
 const int satThreshold = 70;
 const int valueThreshold = 130;
+const int pixelThreshold = 32;
 
-int findRedDot(camera_fb_t *fb) {
+int detectDot() {
   // make sure psram is available
   if (!psramFound()) {
     Serial.println("error: no psram available to store the RGB data");
-    return 0;
+    return ERROR_CATASTROPHIC;
   }
-  unsigned long tTimer = millis();
+
+  // unsigned long tTimer = millis();
+  camera_fb_t *fb = NULL;
+  fb = esp_camera_fb_get();
+
+  if (!fb) {
+    Serial.println("error: failed to capture image from camera");
+    return ERROR_CATASTROPHIC;
+  }
+
+  // Serial.println("JPG image capture took " + String(millis() - tTimer) +
+  //                " ms");  // report time it took to capture an image
+  // Serial.println("Image resolution=" + String(fb->width) + "x" +
+  //                String(fb->height));
+  // Serial.println("Image size=" + String(fb->len) + " bytes");
+  // Serial.println("Image format=" + String(fb->format));
+  // Serial.println("Free memory=" + String(ESP.getFreeHeap()) + " bytes");
+
+  // tTimer = millis();
   // allocate memory to store the rgb data (in psram, 3 bytes per pixel)
-  Serial.println("Free psram before rgb data allocated = " +
-                 String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024) +
-                 "K");
+  // Serial.println("Free psram before rgb data allocated = " +
+  //                String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024) +
+  //                "K");
   void *ptrVal =
       NULL;  // create a pointer for memory location to store the data
 
@@ -32,29 +51,29 @@ int findRedDot(camera_fb_t *fb) {
 
   if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < ARRAY_LENGTH) {
     Serial.println("error: not enough free psram to store the rgb data");
-    return 0;
+    return ERROR_CATASTROPHIC;
   }
   ptrVal = heap_caps_malloc(
       ARRAY_LENGTH,
       MALLOC_CAP_SPIRAM);  // allocate memory space for the rgb data
   uint8_t *rgb = (uint8_t *)
       ptrVal;  // create the 'rgb' array pointer to the allocated memory space
-  Serial.println("Free psram after rgb data allocated = " +
-                 String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024) +
-                 "K");
+  // Serial.println("Free psram after rgb data allocated = " +
+  //                String(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024) +
+  //                "K");
 
   // convert the captured jpg image (fb) to rgb data (store in 'rgb' array)
-  tTimer = millis();  // store time that image conversion process started
+  // tTimer = millis();  // store time that image conversion process started
   bool jpeg_converted = fmt2rgb888(fb->buf, fb->len, PIXFORMAT_JPEG, rgb);
   if (!jpeg_converted) {
     Serial.println("error: failed to convert image to RGB data");
     esp_camera_fb_return(fb);  // camera frame buffer
     heap_caps_free(ptrVal);    // rgb data
-    return 0;
+    return ERROR_CATASTROPHIC;
   }
-  Serial.println("Conversion from jpg to RGB took " +
-                 String(millis() - tTimer) +
-                 " ms");  // report how long the conversion took
+  // Serial.println("Conversion from jpg to RGB took " +
+  //                String(millis() - tTimer) +
+  //                " ms");  // report how long the conversion took
 
   // Print out the RGB data for the first 10 pixels
   // for (int i = 0; i < 10; i++) {
@@ -64,27 +83,28 @@ int findRedDot(camera_fb_t *fb) {
   // }
 
   // get hues
-  tTimer = millis();
+  // tTimer = millis();
 
   if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < PIXEL_COUNT) {
     Serial.println("error: not enough free psram to store the mask");
     esp_camera_fb_return(fb);  // camera frame buffer
     heap_caps_free(ptrVal);    // rgb data
-    return 0;
+    return ERROR_CATASTROPHIC;
   }
   bool *mask = (bool *)heap_caps_malloc(PIXEL_COUNT, MALLOC_CAP_SPIRAM);
 
   unsigned long numPixels =
       imageToMask(mask, PIXEL_COUNT, rgb, ARRAY_LENGTH, hueDesired,
                   hueThreshold, satThreshold, valueThreshold);
-  Serial.println("Conversion to mask took " + String(millis() - tTimer) +
-                 " ms");
-  if (numPixels < 512) {
-    Serial.println("No red dot found");
+  // Serial.println("Conversion to mask took " + String(millis() - tTimer) +
+  //                " ms");
+  if (numPixels < pixelThreshold) {
+    Serial.println("Not enough pixels detected, found " + String(numPixels) +
+                   " px");
     esp_camera_fb_return(fb);  // camera frame buffer
     heap_caps_free(ptrVal);    // rgb data
     heap_caps_free(mask);
-    return 0;
+    return ERROR_NOTHING_DETECTED;
   }
 
   // get histogram
@@ -97,8 +117,6 @@ int findRedDot(camera_fb_t *fb) {
   // get percentage from center
   int percentage = (maxIndex - IMAGE_WIDTH / 2) * 100 / (IMAGE_WIDTH / 2);
 
-  Serial.println("Desired hue: " + String(hueDesired));
-  Serial.println("Threshold: " + String(hueThreshold));
   Serial.println("Max index (Detected x): " + String(maxIndex));
   Serial.println("Percentage from center: " + String(percentage));
 
@@ -106,5 +124,5 @@ int findRedDot(camera_fb_t *fb) {
   esp_camera_fb_return(fb);  // camera frame buffer
   heap_caps_free(ptrVal);    // rgb data
   heap_caps_free(mask);
-  return maxIndex;
+  return percentage;
 }
