@@ -25,6 +25,11 @@ const char *sversion = "2.0";            // Sketch version
 
 // Camera related
 framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_VGA;  // Resolution
+const unsigned int jpeg_quality = 10;          // 0-63 lower number means
+                                               // higher quality (can cause
+                                               // failed image capture if set
+                                               // too low at higher
+                                               // resolutions)
 #define PIXFORMAT PIXFORMAT_JPEG;
 
 const int timeBetweenStatus =
@@ -194,9 +199,7 @@ bool initialiseCamera() {
                          //              400x296 (CIF), 640x480 (VGA, default),
                          //              800x600 (SVGA), 1024x768 (XGA),
                          //              1280x1024 (SXGA), 1600x1200 (UXGA)
-  config.jpeg_quality =
-      10;  // 10-63 lower number means higher quality (can cause failed image
-           // capture if set too low at higher resolutions)
+  config.jpeg_quality = jpeg_quality;
   config.fb_count =
       1;  // if more than one, i2s runs in continuous mode. Use only with JPEG
 
