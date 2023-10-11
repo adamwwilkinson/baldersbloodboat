@@ -165,8 +165,6 @@ void loop() {
   struct_message data = {percentage};
   esp_err_t result =
       esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(struct_message));
-
-  usleep(100000);  // sleep for 1 second
 }
 
 bool initialiseCamera() {
