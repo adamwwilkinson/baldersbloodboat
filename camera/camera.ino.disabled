@@ -1732,7 +1732,7 @@ void handleTest() {
   // -------------------------------------------------------------------
 
   // test code goes here
-  int maxIndex = detectDot(fb);
+  int maxIndex = detectDotWithFrame(fb);
 
   // demo of drawing on the camera image using javascript / html canvas
   //   could be of use to show area of interest on the image etc. - see
