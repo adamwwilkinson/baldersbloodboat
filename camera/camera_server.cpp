@@ -123,7 +123,6 @@ int detectDot() {
   // finished with the data so free up the memory space used in psram
   heap_caps_free(ptrVal);    // rgb data
   esp_camera_fb_return(fb);  // camera frame buffer
-  heap_caps_free(ptrVal);    // rgb data
   heap_caps_free(mask);
   return percentage;
 }
@@ -232,7 +231,6 @@ int detectDotWithFrame(camera_fb_t *fb) {
   // finished with the data so free up the memory space used in psram
   heap_caps_free(ptrVal);    // rgb data
   esp_camera_fb_return(fb);  // camera frame buffer
-  heap_caps_free(ptrVal);    // rgb data
   heap_caps_free(mask);
   return percentage;
 }
