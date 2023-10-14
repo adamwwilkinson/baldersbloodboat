@@ -15,6 +15,15 @@ typedef struct struct_message {
 
 struct_message camValue;
 
+int percent_from_center;
+const int servoChannel = 0;
+const int motorChannel = 2;
+
+const int servoFrequency = 50;
+const int motorFrequency = 3000;
+
+const int resolution = 8;
+
 // wavelength in microseconds
 void pwm(int pin, int wave_length, float percentage) {
   float uptime = wave_length * percentage / 100.0;
@@ -26,7 +35,7 @@ void pwm(int pin, int wave_length, float percentage) {
   delayMicroseconds(downtime);
 }
 
-void forwards() { pwm(HBRIDGE_CW, 10000, 40); }
+void forwards() { ledcWrite(motorChannel, 210); }
 
 /**
  * degrees given is degree of servo
@@ -35,17 +44,22 @@ void forwards() { pwm(HBRIDGE_CW, 10000, 40); }
  * servo should be from 0.6ms up time to 1.3ms uptime (0.6 makes boat go left)
  **/
 void turn(int degrees) {
+  int degrees_actual = degrees;
   int pwm_wavelength = 20000;
 
-  int degree_to_100_percent = map(degrees, -90, 90, 300, 650);
+  static long last = millis();
+
+  int degree_to_100_percent = map(degrees_actual, -90, 90, 300, 650);
 
   // 1ms pulse is -90 degrees, 1.5 ms pulse is 0 degrees, 2ms pulse is 90
   float percentage = degree_to_100_percent / 100.0;
-  Serial.print("percentage: ");
-  Serial.print(percentage);
-  Serial.print('\n');
 
-  pwm(SERVO, pwm_wavelength, percentage);
+  int actual = map(percentage, 0, 100, 0, 255);
+  ledcWrite(servoChannel, actual);
+
+  // Serial.println(percentage);
+
+  // pwm(SERVO, pwm_wavelength, percentage);
 }
 
 // remove forward momentum by blipping reverse for a second
@@ -74,9 +88,6 @@ void sensor() {
   static bool stopped = false;
 
   get_distance(&centimeters);
-  Serial.print("centimeters: ");
-  Serial.print(centimeters);
-  Serial.print('\n');
 
   // double nesting this is so sad
   if (centimeters > 0 && centimeters < 20) {
@@ -86,45 +97,20 @@ void sensor() {
     }
   } else {
     stopped = false;
-    Serial.print("forward\n");
     forwards();
   }
 }
 
-// likely baller
-void PID_servo() {
-  static int degrees_old = 0, error_old = 0, error_old2 = 0;
-  // todo manually tune these values
-  int Kp = 0.2, Ki = 0.05, Kd = 0.3;
-
-  int error_function = camValue.percent_from_center;
-  int raw_degrees = degrees_old + Kp * (error_function - error_old) +
-                    Ki * (error_function + error_old) / 2 +
-                    Kd * (error_function - 2 * error_old + error_old2);
-
-  // invert degrees as servo is inverted
-  int degrees = -1 * constrain(raw_degrees, -90, 90);
-  turn(degrees);
-
-  error_old2 = error_old;
-  error_old = error_function;
-  degrees_old = degrees;
-}
-
 void test_servo() {
-  for (int i = -90; i < 90; i++) {
-    turn(i);
+  int dutyCycle;
+  for (dutyCycle = 10; dutyCycle <= 18; dutyCycle++) {
+    ledcWrite(servoChannel, dutyCycle);
+    delay(70);
   }
-  for (int i = 90; i > -90; i--) {
-    turn(i);
+  for (dutyCycle = 18; dutyCycle >= 10; dutyCycle--) {
+    ledcWrite(servoChannel, dutyCycle);
+    delay(70);
   }
-}
-
-// very primitive, probably shit
-void proportional_servo() {
-  int current_error = camValue.percent_from_center;
-  int degrees = -1 * map(current_error, -100, 100, -90, 90);
-  turn(degrees);
 }
 
 void servo() {
@@ -153,6 +139,17 @@ void servo() {
   turn(degrees);
 }
 
+void bang_servo() {
+  if (percent_from_center == -998) {
+    return;
+  }
+  if (percent_from_center < 0) {
+    ledcWrite(servoChannel, 10);
+  } else {
+    ledcWrite(servoChannel, 18);
+  }
+}
+
 void OnDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
   memcpy(&camValue, incomingData, sizeof(camValue));
 }
@@ -172,24 +169,48 @@ void setup() {
   // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
 
-  pinMode(SERVO, OUTPUT);
-
   pinMode(HBRIDGE_CW, OUTPUT);
   pinMode(HBRIDGE_CCW, OUTPUT);
 
   pinMode(SENSOR_TRIG, OUTPUT);
   pinMode(SENSOR_ECHO, INPUT);
+
+  ledcSetup(servoChannel, servoFrequency, resolution);
+  ledcSetup(motorChannel, motorFrequency, resolution);
+
+  ledcAttachPin(SERVO, servoChannel);
+  ledcWrite(servoChannel, 0);
+
+  ledcAttachPin(HBRIDGE_CW, motorChannel);
+  ledcWrite(motorChannel, 0);
 }
 
 void loop() {
-  /**
-   * handles the recieved cam data and turns the boat using a PID controller
-   **/
-  // PID_servo();
+  percent_from_center = camValue.percent_from_center;
+  static int centimeters = 0;
+  static bool stopped = false;
 
-  test_servo();
-  Serial.print("camValue: ");
-  Serial.println(camValue.percent_from_center);
+  get_distance(&centimeters);
+
+  bang_servo();
+
+  // test_servo();
+
+  if (centimeters > 0 && centimeters < 20) {
+    if (!stopped) {
+      abrupt_stop();
+      stopped = true;
+    } else {
+      ledcWrite(motorChannel, 0);
+    }
+  } else {
+    stopped = false;
+    if (percent_from_center == -998) {
+      ledcWrite(motorChannel, 0);
+    } else {
+      forwards();
+    }
+  }
 
   /**
    * i think i made this function too powerful but oh well
