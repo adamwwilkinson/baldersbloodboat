@@ -24,12 +24,12 @@ const char *stitle = "Amogus Detector";  // title of this sketch
 const char *sversion = "2.0";            // Sketch version
 
 // Camera related
-framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_VGA;  // Resolution
-const unsigned int jpeg_quality = 10;          // 0-63 lower number means
-                                               // higher quality (can cause
-                                               // failed image capture if set
-                                               // too low at higher
-                                               // resolutions)
+framesize_t FRAME_SIZE_IMAGE = FRAMESIZE_HVGA;  // Resolution
+const unsigned int jpeg_quality = 24;           // 0-63 lower number means
+                                                // higher quality (can cause
+                                                // failed image capture if set
+                                                // too low at higher
+                                                // resolutions)
 #define PIXFORMAT PIXFORMAT_JPEG;
 
 const int timeBetweenStatus =
