@@ -24,18 +24,7 @@ const int motorFrequency = 3000;
 
 const int resolution = 8;
 
-// wavelength in microseconds
-void pwm(int pin, int wave_length, float percentage) {
-  float uptime = wave_length * percentage / 100.0;
-  float downtime = wave_length * (100 - percentage) / 100.0;
-
-  digitalWrite(pin, HIGH);
-  delayMicroseconds(uptime);
-  digitalWrite(pin, LOW);
-  delayMicroseconds(downtime);
-}
-
-void forwards() { ledcWrite(motorChannel, 210); }
+void forwards() { ledcWrite(motorChannel, 220); }
 
 /**
  * degrees given is degree of servo
@@ -113,40 +102,20 @@ void test_servo() {
   }
 }
 
-void servo() {
-  int percent_from_center = camValue.percent_from_center;
-  int absolute_percent_from_center = abs(percent_from_center);
-  int degrees;
-
-  // pre much just a lookup here rather than a calculation
-  // think of it as a slightly more complex bang bang controller
-  // lotta complexity in order to add a PID controller when this might
-  // just do 90% of the job
-  if (absolute_percent_from_center < 5) {
-    degrees = 0;
-  } else if (absolute_percent_from_center >= 20) {
-    degrees = 15;
-  } else if (absolute_percent_from_center >= 60) {
-    degrees = 60;
-  } else {
-    degrees = 90;
-  }
-
-  // inverted here as we want to turn the servo the opposite way to the boat
-  if (percent_from_center > 0) {
-    degrees = -degrees;
-  }
-  turn(degrees);
-}
-
 void bang_servo() {
+  // Serial.print("percent from center: ");
+  // Serial.println(percent_from_center);
   if (percent_from_center == -998) {
     return;
   }
+
+  // 18 and 0 is max right and left
   if (percent_from_center < 0) {
-    ledcWrite(servoChannel, 10);
+    ledcWrite(servoChannel, 15);
+  } else if (percent_from_center > 0) {
+    ledcWrite(servoChannel, 13);
   } else {
-    ledcWrite(servoChannel, 18);
+    return;
   }
 }
 
@@ -194,8 +163,6 @@ void loop() {
 
   bang_servo();
 
-  // test_servo();
-
   if (centimeters > 0 && centimeters < 20) {
     if (!stopped) {
       abrupt_stop();
@@ -211,12 +178,4 @@ void loop() {
       forwards();
     }
   }
-
-  /**
-   * i think i made this function too powerful but oh well
-   * this mf controls forwards and backwards of boats but it stops me from
-   * trying to be too smart with pointers and shii so hopefully its more
-   * readable
-   */
-  // sensor();
 }
